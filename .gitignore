@@ -1,0 +1,8 @@
+ecap_node
+*.beam
+erl_crash.dump
+*.so
+a.out
+gen_traffic
+.nfs*
+.*.swp
