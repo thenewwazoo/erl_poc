@@ -15,16 +15,21 @@ start_link(InterruptSource) ->
 
 init(InterruptSource, EvtMgr) ->
     register(evtmgr, EvtMgr),
-    erl_ddll:load_driver(".", ?INTDRV),
-    Port = open_port({spawn, ?INTDRV ++ " " ++ InterruptSource}, [binary]),
-    loop(Port).
+    {any, 'ecap@localhost'} ! { call, self(), InterruptSource },
+    receive
+        { ecap_node, ok } ->
+            loop();
+        Err ->
+            io:format("init call to ecap node failed: ~w~n", Err),
+            error(Err)
+    end.
 
-loop(IntPort) ->
+loop() ->
     receive
         { Port, {data, Data} } when Port == IntPort ->
             %% we're intentionally not doing any manipulation here
             %% we naively pass data, and expect our subscribers to deal with it.
             gen_event:notify(evtmgr, { ding, { Data } }),
-            loop(IntPort)
+            loop()
         %% we also need a way to detect stalling (see mle module's stall_detected event)
     end.

@@ -350,7 +350,7 @@ void watcher(void* data)
             attrdata[cnt] = '\0';
             TRACE(("watcher got %d bytes: %s", cnt, attrdata));
 
-            ETERM* notification = erl_format("{ding, { ~s } }", attrdata);
+            ETERM* notification = erl_format("{data, ~s}", attrdata);
 
             int sendret = erl_send(threadinfo->erlvm_fd, threadinfo->topid, notification);
             if (!sendret)
