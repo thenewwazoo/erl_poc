@@ -26,7 +26,7 @@ init(InterruptSource, EvtMgr) ->
 
 loop() ->
     receive
-        { Port, {data, Data} } when Port == IntPort ->
+        { data, Data } ->
             %% we're intentionally not doing any manipulation here
             %% we naively pass data, and expect our subscribers to deal with it.
             gen_event:notify(evtmgr, { ding, { Data } }),
