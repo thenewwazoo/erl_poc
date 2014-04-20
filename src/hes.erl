@@ -1,6 +1,8 @@
 %% Driver shim for Hall-effect sensor interrupt triggers.
 -module(hes).
 
+-define(ECAPNODE, 'c1@localhost').
+
 -export([ start_link/1, init/2 ]).
 
 %% This file name must not include the .so extension, and must match the
@@ -15,12 +17,12 @@ start_link(InterruptSource) ->
 
 init(InterruptSource, EvtMgr) ->
     register(evtmgr, EvtMgr),
-    {any, 'ecap@localhost'} ! { call, self(), InterruptSource },
+    {any, ?ECAPNODE} ! { call, self(), { init, InterruptSource } },
     receive
         { ecap_node, ok } ->
             loop();
         Err ->
-            io:format("init call to ecap node failed: ~w~n", Err),
+            io:format("init call to ecap node failed: ~w~n", [Err]),
             error(Err)
     end.
 
