@@ -42,9 +42,9 @@ init([ Whom, CapRegFile ]) ->
     NewState = #state{whom=Whom, capregfile=CapRegFile},
     {ok, NewState}.
 
-handle_event({ ding, { Data } }, State) when is_binary(Data) ->
+handle_event({ ding, { Data } }, State) ->
     %% Data is ecap_regs->ECFLG
-    EcapFlg = binary_to_integer(Data, 16),
+    EcapFlg = list_to_integer(Data, 16),
     {ok, CapStr} = file:read_file(State#state.capregfile),
     CapTok = string:tokens(binary_to_list(CapStr), ","),
     Stamps = [ list_to_integer(T, 16) || T <- CapTok ],
