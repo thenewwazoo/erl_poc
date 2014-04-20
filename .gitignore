@@ -1,4 +1,4 @@
-ecap_node
+ecap-node
 *.beam
 erl_crash.dump
 *.so
