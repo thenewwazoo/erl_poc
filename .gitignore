@@ -6,3 +6,10 @@ a.out
 gen_traffic
 .nfs*
 .*.swp
+.kmod*
+*.mod.*
+*.o
+*.ko
+Module.symvers
+modules.order
+.tmp_versions
