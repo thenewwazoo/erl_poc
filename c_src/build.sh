@@ -4,4 +4,4 @@ INCLUDE=-I/home/bmatt/Development/BeagleBoneBlack/erlang/esl-erlang/root/usr/lib
 LIBINC=-L/home/bmatt/Development/BeagleBoneBlack/erlang/esl-erlang/root/usr/lib/erlang/lib/erl_interface-3.7.9/lib/
 DEBUG=-DDEBUG
 
-$CC -o ecap_node ecap_node.c $LIBS $INCLUDE $LIBINC $DEBUG
+$CC -o ecap-node node.c $LIBS $INCLUDE $LIBINC $DEBUG
