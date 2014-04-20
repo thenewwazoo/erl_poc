@@ -4,7 +4,7 @@
 #$ make ARCH=arm CROSS_COMPILE=arm-linux-gnueabihf-
 #
 
-obj-m += gpiohw.o ecap_plat.o
+obj-m += c_src/kmod.o
 
 #INCLUDE += -I/home/bmatt/Development/BeagleBoneBlack/kernel/kernel/arch/arm/plat-omap/include
 #XENODIR = /home/bmatt/Development/BeagleBoneBlack/nerves/nerves-sdk/buildroot/output/host/usr/arm-buildroot-linux-gnueabihf/sysroot/usr
