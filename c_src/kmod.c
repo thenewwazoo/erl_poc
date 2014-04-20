@@ -128,9 +128,9 @@ printk(KERN_DEBUG "enabled module in cm_per.\n");
 printk(KERN_DEBUG "mux'd pin\n");
 
     pdata->ecap_regs->ECEINT = 0x0;
-    pdata->ecap_regs->ECCTL1 = (EC_RISING << CAP1POL)     | (EC_RISING << CAP2POL)     | (EC_RISING << CAP3POL)     | (EC_RISING << CAP4POL)     |
-                               (EC_DELTA_MODE << CTRRST1) | (EC_DELTA_MODE << CTRRST2) | (EC_DELTA_MODE << CTRRST3) | (EC_DELTA_MODE << CTRRST4) |
-                               (EC_ENABLE << CAPLDEN)     | (EC_DIV1 << PRESCALE);
+    pdata->ecap_regs->ECCTL1 = (EC_RISING << CAP1POL)   | (EC_RISING << CAP2POL)   | (EC_RISING << CAP3POL)   | (EC_RISING << CAP4POL)   |
+                               (EC_ABS_MODE << CTRRST1) | (EC_ABS_MODE << CTRRST2) | (EC_ABS_MODE << CTRRST3) | (EC_ABS_MODE << CTRRST4) |
+                               (EC_ENABLE << CAPLDEN)   | (EC_DIV1 << PRESCALE);
     pdata->ecap_regs->ECCTL2 = (EC_CAP_MODE << CAP_APWM)   | (EC_CONTINUOUS << CONT_ONESHT) | (EC_EVENT4 << STOP_WRAP) |
                                (EC_SYNCO_DIS << SYNCO_SEL) | (EC_DISABLE << SYNCI_EN);
     pdata->ecap_regs->ECCLR = BIT(CTR_EQ_CMP) | BIT(CTR_EQ_PRD) | BIT(CTROVF) | BIT(CEVT4) | BIT(CEVT3) | BIT(CEVT2) | BIT(CEVT1) | BIT(INT);
