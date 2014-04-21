@@ -74,12 +74,12 @@ get_tstamp( CapReg, EcapFlg ) ->
     %%  register via rotation. It's basically only for the (hopefully unusual) edge
     %%  case when we've missed a(n) interrupt(s).
     {Flagbits, R} = find_lowest_rotation([ FourBit, ThreeBit, TwoBit, OneBit ]),
-    Timerlist = tools:lrot( CapReg, R),
+    Timerlist = tools:lrot( CapReg, R ),
 
     %% Calculate time deltas between captures using two's compliment unsigned subtraction
     Timediffs = lists:zipwith( fun(New, Old) -> binary:decode_unsigned(<<(New - Old)>>) end, Timerlist, tools:lrot(Timerlist, 1)),
 
-    Now     = bits_filter(Flagbits, CapReg ),
+    Now     = bits_filter(Flagbits, Timerlist),
     Current = bits_filter(Flagbits, Timediffs),
     %% We do some shifting here to make the values line up with the Current list
     %%Prior   = tools:lrot(bits_filter(tools:rrot(Flagbits), Timediffs)),
