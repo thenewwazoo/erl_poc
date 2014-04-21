@@ -77,7 +77,7 @@ get_tstamp( CapReg, EcapFlg ) ->
     Timerlist = tools:lrot( CapReg, R ),
 
     %% Calculate time deltas between captures using two's compliment unsigned subtraction
-    Timediffs = lists:zipwith( fun(New, Old) -> binary:decode_unsigned(<<(New - Old)>>) end, Timerlist, tools:lrot(Timerlist, 1)),
+    Timediffs = lists:zipwith( fun(New, Old) -> binary:decode_unsigned(<<(New - Old):32>>) end, Timerlist, tools:lrot(Timerlist, 1)),
 
     Now     = bits_filter(Flagbits, Timerlist),
     Current = bits_filter(Flagbits, Timediffs),
