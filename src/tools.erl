@@ -1,5 +1,5 @@
 -module(tools).
--export([ lrot/1, rrot/1, lrot/2, rrot/2, rot_tests/0, brol/2 ]).
+-export([ lrot/1, rrot/1, lrot/2, rrot/2, rot_tests/0, brol/2, index_of/2 ]).
 
 %% --------------------------------
 %%  List rotation helper functions
@@ -43,3 +43,12 @@ rot_tests() ->
 %% --------------------------------
 
 brol(Bin,Shift) -> <<U:Shift,Rest/bits>> = Bin, <<Rest/bits,U:Shift>>.
+
+%% --------------------------------
+%%  Index search helper
+%% --------------------------------
+index_of(Item, List) -> index_of(Item, List, 1).
+
+index_of(_, [], _)  -> not_found;
+index_of(Item, [Item|_], Index) -> Index;
+index_of(Item, [_|Tl], Index) -> index_of(Item, Tl, Index+1).
