@@ -7,8 +7,8 @@
 
 start_link(InterruptSource) ->
     {ok, EvtMgr} = gen_event:start_link(),
-    spawn_link(?MODULE, init, [InterruptSource, EvtMgr]), %% Eventually, we should do real supervision
-    {ok, EvtMgr}.
+    EvtPid = spawn_link(?MODULE, init, [InterruptSource, EvtMgr]), %% Eventually, we should do real supervision
+    {ok, EvtMgr, EvtPid}.
 
 init(InterruptSource, EvtMgr) ->
     register(evtmgr, EvtMgr),
