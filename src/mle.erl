@@ -18,6 +18,7 @@
                     toothdist, 
                     maxaccel, 
                     errorrate,
+                    minconf,
                     priorstamp,
                     hassync,
                     synctooth,
@@ -31,51 +32,41 @@ add_handler(Who, Whom, InitArgs) ->
     Result = gen_event:add_handler(Who, Id, [Whom | InitArgs]),
     {Result, Id}.
 
-init([ Whom, DistMap, MaxAccel, ErrorRate, SyncConf ]) ->
+init([ Whom, DistMap, MaxAccel, ErrorRate, MinConf ]) ->
     NewState = #mlestate{ toothprob = normalize([ 1 || _ <- DistMap ]),
-                         toothdist = DistMap,
-                         maxaccel  = MaxAccel,
-                         errorrate = ErrorRate,
-                         whom      = Whom,
-                         syncconf  = SyncConf,
-                         synctooth = 1,
-                         hassync   = false,
-                         priorstamp = 1 },
+                          toothdist = DistMap,
+                          maxaccel  = MaxAccel,
+                          errorrate = ErrorRate,
+                          whom      = Whom,
+                          syncconf  = 0.01,
+                          minconf   = MinConf,
+                          synctooth = 1,
+                          hassync   = false,
+                          priorstamp = 1 },
     {ok, NewState}.
 
-handle_event({ ecap_capture, { Tw, T1 } }, State) ->
-    % Here, we should do our localization
-    T0 = State#mlestate.priorstamp,
-    Prior = State#mlestate.toothprob,
-    Moved = move(State, Prior),
-    Located = locate(State, Moved, T1, T0),
-    Posterior = normalize(Located),
-    Confidence = lists:max(Posterior),
-    SyncTooth = tools:index_of(Confidence, Posterior),
+handle_event({ ecap_capture, { Tw, T1 } }, Prior) ->
+    Posterior = localize(Prior, T1),
     ErrAcc = calc_accel(
-                lists:nth( State#mlestate.synctooth, State#mlestate.toothdist ),
-                T0,
-                lists:nth( SyncTooth, State#mlestate.toothdist ),
-                T1,
-                lists:sum(State#mlestate.toothdist) 
+                lists:nth( Prior#mlestate.synctooth, Prior#mlestate.toothdist         ), Prior#mlestate.priorstamp,
+                lists:nth( Posterior#mlestate.synctooth, Posterior#mlestate.toothdist ), T1,
+                lists:sum(Prior#mlestate.toothdist) 
              ),
-    NewState = State#mlestate{ toothprob = Posterior, priorstamp = T1 },
-    if
-        Confidence >= State#mlestate.syncconf ->
-            %% we irrefutably have sync, so we take an early exit
-            gen_event:notify( State#mlestate.whom, { sync, { SyncTooth, Tw } } ),
-            { ok, NewState#mlestate{ hassync = true, synctooth = SyncTooth } };
-        Confidence < State#mlestate.syncconf ->
-            %% we could have sync but confidence has dropped due to lots of simple moves
-            if
-                ErrAcc >= State#mlestate.maxaccel ->
-                    gen_event:notify( State#mlestate.whom, { nosync } ),
-                    { ok, NewState#mlestate{ hassync = false } };
-                ErrAcc < State#mlestate.maxaccel ->
-                    { ok, NewState#mlestate{ synctooth = SyncTooth } }
-            end
+    case { Posterior, ErrAcc } of
+        { S = #mlestate{ maxaccel=MaxAccel }, E } when E >= MaxAccel ->
+            gen_event:notify( S#mlestate.whom, { nosync } ),
+            { ok, S#mlestate{ hassync = false } };
+        { S = #mlestate{ syncconf=SyncConf, minconf=MinConf }, _ } when SyncConf >= MinConf ->
+            gen_event:notify( S#mlestate.whom, { sync, { S#mlestate.synctooth, Tw } } ),
+            { ok, S#mlestate{ hassync = true } };
+        { S = #mlestate{ hassync=true }, _ } ->
+            gen_event:notify( S#mlestate.whom, { sync, { S#mlestate.synctooth, Tw } } ),
+            { ok, S };
+        { S, _ } ->
+            gen_event:notify( S#mlestate.whom, { nosync } ),
+            { ok, S }
     end;
-
+            
 handle_event({ stall_detected }, State) ->
     % oops! perhaps reset state data?
     % notify subscribers somehow
@@ -90,23 +81,38 @@ handle_event(Event, State) ->
 %%  Markov localization functions
 %% ----------------------------------------------------------------------------
 
-move(S, Prior) ->
-    False = [ P * S#mlestate.errorrate / 2   || P <- Prior ],
-    Move  = [ P * (1 - S#mlestate.errorrate) || P <- tools:rrot(Prior, 1) ],
+localize(Prior, T1) ->
+    Moved = move(Prior),
+    Located = locate(Moved, T1),
+    Normalized = normalize(Located),
+    Confidence = lists:max(Normalized#mlestate.toothprob),
+    Normalized#mlestate{ syncconf   = Confidence,
+                         priorstamp = T1,
+                         synctooth  = tools:index_of(Confidence, Normalized#mlestate.toothprob) }.
+
+%% move(#mlestate{ toothprob = P, errorrate = MaxErr }, S) ->
+move(S) ->
+    False = [ P * S#mlestate.errorrate / 2   || P <- S#mlestate.toothprob ],
+    Move  = [ P * (1 - S#mlestate.errorrate) || P <- tools:rrot(S#mlestate.toothprob, 1) ],
     Miss  = tools:rrot(False, 2),
     Sum = lists:zipwith3( fun(F,M,I) -> F+M+I end, False, Move, Miss ),
-    Sum.
+    S#mlestate{ toothprob = Sum }.
 
-locate(S, Moved, Timestamp, PriorTimestamp) ->
+locate(S, T1) ->
     NumToothPosns = lists:sum(S#mlestate.toothdist),
-    Located = lists:zipwith3(   fun(D0, D1, P) ->
-                                    accel_prob(PriorTimestamp, D0, Timestamp, D1, NumToothPosns, P, S#mlestate.maxaccel, S#mlestate.errorrate)
-                                end,
-                                tools:rrot(S#mlestate.toothdist, 1),
-                                S#mlestate.toothdist,
-                                Moved),
-    Located.
+    Located = lists:zipwith3( fun(D0, D1, P) ->
+                                  accel_prob(S#mlestate.priorstamp, D0,     % prior
+                                             T1, D1,                        % current
+                                             NumToothPosns, P,
+                                             S#mlestate.maxaccel, S#mlestate.errorrate)
+                              end,
+                              tools:rrot(S#mlestate.toothdist, 1),
+                              S#mlestate.toothdist,
+                              S#mlestate.toothprob),
+    S#mlestate{ toothprob = Located }.
 
+normalize(S) when is_record(S, mlestate) ->
+    S#mlestate{ toothprob = normalize(S#mlestate.toothprob) };
 normalize(L) when is_list(L) ->
     Invsum = 1 / lists:sum(L),
     [ I * Invsum || I <- L ].

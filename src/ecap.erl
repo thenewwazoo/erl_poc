@@ -64,25 +64,23 @@ handle_event(Event, State) ->
 %% EcapFLG = ecap_regs->ECFLG => bitfield { .., .cap4, .cap3, .cap2, .cap1, ... }
 get_tstamp( CapReg, EcapFlg ) ->
 
-    %% Unpack ECFLG
+    % Unpack ECFLG
     <<_Other:2, _OVFBit:1, FourBit:1, ThreeBit:1, TwoBit:1, OneBit:1, _GenBit:1>> = <<EcapFlg:8>>,
 
-    %% Here we find the "lowest" state of the flag input. This state gives us
-    %%  a resultant list ordered by age, from newest flag to oldest flag. The reason
-    %%  for this is to handle situations where CAPn is newer than CAP(n+m) because the
-    %%  registers have "wrapped" in time. This finds the "break" (zeroes) in the flag
-    %%  register via rotation. It's basically only for the (hopefully unusual) edge
-    %%  case when we've missed a(n) interrupt(s).
+    % Here we find the "lowest" state of the flag input. This state gives us
+    %  a resultant list ordered by age, from newest flag to oldest flag. The reason
+    %  for this is to handle situations where CAPn is newer than CAP(n+m) because the
+    %  registers have "wrapped" in time. This finds the "break" (zeroes) in the flag
+    %  register via rotation. It's basically only for the (hopefully unusual) edge
+    %  case when we've missed a(n) interrupt(s).
     {Flagbits, R} = find_lowest_rotation([ FourBit, ThreeBit, TwoBit, OneBit ]),
     Timerlist = tools:lrot( CapReg, R ),
 
-    %% Calculate time deltas between captures using two's compliment unsigned subtraction
+    % Calculate time deltas between captures using two's compliment unsigned subtraction
     Timediffs = lists:zipwith( fun(New, Old) -> binary:decode_unsigned(<<(New - Old):32>>) end, Timerlist, tools:lrot(Timerlist, 1)),
 
     Now     = bits_filter(Flagbits, Timerlist),
     Current = bits_filter(Flagbits, Timediffs),
-    %% We do some shifting here to make the values line up with the Current list
-    %%Prior   = tools:lrot(bits_filter(tools:rrot(Flagbits), Timediffs)),
 
     lists:zip( Now, Current ).
 
