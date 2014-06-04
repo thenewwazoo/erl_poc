@@ -46,21 +46,25 @@ init([ Whom, DistMap, MaxAccel, ErrorRate, MinConf ]) ->
     {ok, NewState}.
 
 handle_event({ ecap_capture, { Tw, T1 } }, Prior) ->
+    % Do Markov localization with the new data
     Posterior = localize(Prior, T1),
+    % Calculate a "sanity check" with our localization. This gives a sort of
+    %  hysterisis on our guess, if we've suddenly gotten very confident
+    %  but our previous guess was far from here.
     ErrAcc = calc_accel(
                 lists:nth( Prior#mlestate.synctooth, Prior#mlestate.toothdist         ), Prior#mlestate.priorstamp,
                 lists:nth( Posterior#mlestate.synctooth, Posterior#mlestate.toothdist ), T1,
                 lists:sum(Prior#mlestate.toothdist) 
              ),
     case { Posterior, ErrAcc } of
-        { S = #mlestate{ maxaccel=MaxAccel }, E } when E >= MaxAccel ->
+        { S = #mlestate{ maxaccel=MaxAccel }, E } when E >= MaxAccel -> 
             gen_event:notify( S#mlestate.whom, { nosync } ),
             { ok, S#mlestate{ hassync = false } };
         { S = #mlestate{ syncconf=SyncConf, minconf=MinConf }, _ } when SyncConf >= MinConf ->
-            gen_event:notify( S#mlestate.whom, { sync, { S#mlestate.synctooth, Tw } } ),
+            gen_event:notify( S#mlestate.whom, { sync, { S#mlestate.synctooth, Prior#mlestate.synctooth, Tw, T1 } } ),
             { ok, S#mlestate{ hassync = true } };
         { S = #mlestate{ hassync=true }, _ } ->
-            gen_event:notify( S#mlestate.whom, { sync, { S#mlestate.synctooth, Tw } } ),
+            gen_event:notify( S#mlestate.whom, { sync, { S#mlestate.synctooth, Prior#mlestate.synctooth, Tw, T1 } } ),
             { ok, S };
         { S, _ } ->
             gen_event:notify( S#mlestate.whom, { nosync } ),
@@ -68,9 +72,8 @@ handle_event({ ecap_capture, { Tw, T1 } }, Prior) ->
     end;
             
 handle_event({ stall_detected }, State) ->
-    % oops! perhaps reset state data?
-    % notify subscribers somehow
-    {ok, State};
+    gen_event:notify( State#mlestate.whom, { nosync } ),
+    {ok, State#mlestate{ hassync = false }};
 
 handle_event(Event, State) ->
     R = io_lib:format("~p", [Event]),

@@ -15,16 +15,62 @@ hwtest() ->
     {ok, TehMleRef} = test_gen_event_handler:add_handler(MleMgr, ["MleMgr"]),
     [ [HesMgr, CapMgr, MleMgr], [CapRef, MleRef], [TehCapRef, TehMleRef], [HesPid] ].
 
-mle_test_start() ->
+phase_test_start(Td, MaxAcc, ErrRate, MinConf) ->
+    [ NoneMgr, MleMgr ] = mle_test_start(Td, MaxAcc, ErrRate, MinConf),
+    {ok, PhaseMgr} = gen_event:start({local, phase}),
+    ok = gen_event:add_handler(MleMgr, phase, [PhaseMgr, Td]),
+    [ NoneMgr, MleMgr, PhaseMgr ].
+
+mle_test_start(Td, MaxAcc, ErrRate, MinConf) ->
     {ok, NoneMgr} = gen_event:start(),
     {ok, MleMgr} = gen_event:start({local, mle}),
-    gen_event:add_handler(NoneMgr, mle, [MleMgr, [1,1,2], 1.0e-18, 0.15, 0.945]),
-    {ok, TehMleRef} = test_gen_event_handler:add_handler(MleMgr, ["MleMgr"]),
-    [ NoneMgr, MleMgr, TehMleRef ].
+    ok = gen_event:add_handler(NoneMgr, mle, [MleMgr, Td, MaxAcc, ErrRate, MinConf]),
+    [ NoneMgr, MleMgr ].
+
+phase_test_stop(N, M, P) ->
+    ok = gen_event:stop(P),
+    ok = mle_test_stop(N, M),
+    ok.
+
+mle_test_stop(N, M) ->
+    ok = gen_event:stop(N), gen_event:stop(M),
+    ok.
+
+phasetest() ->
+    [ Td, MaxAcc, ErrRate, MinConf ] = seedvalues(),
+    [ N, M, P ] = phase_test_start(Td, MaxAcc, ErrRate, MinConf),
+    {ok, TehMleRef} = test_gen_event_handler:add_handler(M, ["MleMgr"]),
+    {ok, TehPhsRef} = test_gen_event_handler:add_handler(P, ["PhaseMgr"]),
+    irritate(N), irritate(M), irritate(P),
+    stimulate(N),
+    timer:sleep(10),
+    io:format("~s", [io_lib:format("get_angle(1300) returned: ~8.1f~n", [gen_event:call(M, phase, {get_angle, 1300})])]),
+    io:format("~s", [io_lib:format("get_angle(1400) returned: ~8.1f~n", [gen_event:call(M, phase, {get_angle, 1400})])]),
+    io:format("~s", [io_lib:format("get_time(0) returned: ~8.1f~n", [gen_event:call(M, phase, {get_time, 0})])]),
+    io:format("~s", [io_lib:format("get_time(90) returned: ~8.1f~n", [gen_event:call(M, phase, {get_time, 90})])]),
+    ok = phase_test_stop(N, M, P),
+    ok.
 
 mletest() ->
-    [ N, M, T ] = mle_test_start(),
-    gen_event:notify(N, this_is_sparta),
+    [ Td, MaxAcc, ErrRate, MinConf ] = seedvalues(),
+    [ N, M ] = mle_test_start(Td, MaxAcc, ErrRate, MinConf ),
+    {ok, TehMleRef} = test_gen_event_handler:add_handler(M, ["MleMgr"]),
+    irritate(N),
+    stimulate(N),
+    {ok} = mle_test_stop(N, M),
+    ok.
+
+seedvalues() ->
+    Td = [1,1,2],
+    MaxAcc = 1.0e-18,
+    ErrRate = 0.15,
+    MinConf = 0.945,
+    [ Td, MaxAcc, ErrRate, MinConf ].
+
+irritate(N) ->
+    gen_event:notify(N, this_is_sparta).
+
+stimulate(N) ->
     gen_event:notify(N, { ecap_capture, { 100, 100 } }),
     gen_event:notify(N, { ecap_capture, { 200, 100 } }),
     gen_event:notify(N, { ecap_capture, { 400, 200 } }),
@@ -35,4 +81,4 @@ mletest() ->
     gen_event:notify(N, { ecap_capture, { 1000, 100 } }),
     gen_event:notify(N, { ecap_capture, { 1200, 200 } }),
     gen_event:notify(N, { ecap_capture, { 1300, 100 } }),
-    gen_event:stop(N), gen_event:stop(M).
+    {ok}.
