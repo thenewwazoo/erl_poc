@@ -61,7 +61,7 @@ handle_event({ sync, { ToothNum, PriorTooth, Clock, Duration } }, State) ->
     % calculate the velocity in ticks per degree
     V = A / Duration,
 
-    % find the number of tooth positions since TDC
+    % find the number of tooth positions since TDC, minus one since tooth 1 is at 0°
     TDCDist = lists:sum( lists:sublist( State#phase.toothdist, ToothNum ) ) - 1,
     % find the number of tooth positions total
     TPosns = lists:sum( State#phase.toothdist ),
@@ -97,7 +97,7 @@ handle_call({get_angle, Now}, State = #phase{ hassync=true }) ->
     end;
 
 %% Calculate the time at which we'll be at the given angle, Theta,
-%%  assuming we can only move forward.
+%%  (assuming we can only move forward).
 handle_call({get_time, Theta}, State = #phase{ hassync=true }) ->
     io:format("get_time(~w) called with State = ~w~n", [Theta, State]),
     case Theta < State#phase.angle of
