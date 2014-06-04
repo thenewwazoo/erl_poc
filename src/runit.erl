@@ -15,6 +15,12 @@ hwtest() ->
     {ok, TehMleRef} = test_gen_event_handler:add_handler(MleMgr, ["MleMgr"]),
     [ [HesMgr, CapMgr, MleMgr], [CapRef, MleRef], [TehCapRef, TehMleRef], [HesPid] ].
 
+tacho_test_start(Hz, Td, MaxAcc, ErrRate, MinConf) ->
+    [ NoneMgr, MleMgr ] = mle_test_start(Td, MaxAcc, ErrRate, MinConf),
+    {ok, Tacho} = gen_event:start({local, tachometer}),
+    ok = gen_event:add_handler(MleMgr, tachometer, [Hz]),
+    [ NoneMgr, MleMgr, Tacho ].
+
 phase_test_start(Td, MaxAcc, ErrRate, MinConf) ->
     [ NoneMgr, MleMgr ] = mle_test_start(Td, MaxAcc, ErrRate, MinConf),
     {ok, PhaseMgr} = gen_event:start({local, phase}),
@@ -34,6 +40,17 @@ phase_test_stop(N, M, P) ->
 
 mle_test_stop(N, M) ->
     ok = gen_event:stop(N), gen_event:stop(M),
+    ok.
+
+tachotest() ->
+    [ Td, MaxAcc, ErrRate, MinConf] = seedvalues(),
+    [ N, M, T ] = tacho_test_start(100, Td, MaxAcc, ErrRate, MinConf),
+    {ok, TehMleRef} = test_gen_event_handler:add_handler(M, ["MleMgr"]),
+    stimulate(N),
+    timer:sleep(10),
+    Rpm = gen_event:call(M, tachometer, {get_rpm}),
+    io:format("RPM is ~w~n", [Rpm]),
+    ok = phase_test_stop(N, M, T),
     ok.
 
 phasetest() ->
