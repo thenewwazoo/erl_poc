@@ -23,7 +23,7 @@
          terminate/2,
          code_change/3]).
 
--record(state, {rpm, timerhz, priortime}).
+-record(state, {rpm, clockfactor, priortime}).
 
 %%%===================================================================
 %%% gen_event callbacks
@@ -41,7 +41,7 @@ add_handler(Handler, Args) ->
 
 %% TimerHz = timer clockspeed in Hz (i.e. 200MHz clock = 200000000)
 init([TimerHz]) ->
-    { ok, #state{ rpm = 0, timerhz = TimerHz, priortime = 0 } }.
+    { ok, #state{ rpm = 0, clockfactor = TimerHz * 60, priortime = 0 } }.
 
 handle_event({ sync, {1, _, Tw, _} }, State) ->
     case State#state.priortime > Tw of
@@ -49,9 +49,9 @@ handle_event({ sync, {1, _, Tw, _} }, State) ->
         % Since it's (relatively) rare, we're going to just happily ignore when the timer wraps.
         {ok, State#state{ priortime = Tw }};
       false ->
-        % (1 rev / t ticks) * (hz ticks / 1 sec) * (60 sec / 1 min) = (n rev / 1 min)
+        % RPM => (1 rev / t ticks) * (hz ticks / 1 sec) * (60 sec / 1 min) = (n rev / 1 min)
         {ok, State#state{ priortime = Tw,
-                          rpm = 1 / (Tw - State#state.priortime) * State#state.timerhz * 60 } }
+                          rpm = State#state.clockfactor / (Tw - State#state.priortime) } }
     end;
 handle_event(_Event, State) ->
     {ok, State}.
