@@ -8,7 +8,8 @@
  laying around somewhere. Let me know if you want to debug the interrupt issue.
 
  BUGS:
- - Current code only initializes and exposes eCAP0 (hw has two more).
+ - Current code only initializes and exposes eCAP0 (hw has two more)
+ - Doesn't work on any kernel newer than 3.2; only really tested on TI EZSDK kernels
 
  Copyleft Brandon Matthews <thenewwazoo@optimaltour.us> GPLv2
 */
