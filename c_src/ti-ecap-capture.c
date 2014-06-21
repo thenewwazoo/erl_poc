@@ -1,4 +1,18 @@
 
+/*
+ A rather brute-forceish kernel module for the TI AM3359 eCAP which
+ allows use of the input capture feature. 
+ 
+ Targetted at Linux 3.2.x because anything newer that properly supports device
+ trees doesn't actually interrupt and I have no idea why. I've got a DT version
+ laying around somewhere. Let me know if you want to debug the interrupt issue.
+
+ BUGS:
+ - Current code only initializes and exposes eCAP0 (hw has two more).
+
+ Copyleft Brandon Matthews <thenewwazoo@optimaltour.us> GPLv2
+*/
+
 #include <linux/kernel.h>
 #include <linux/module.h>
 #include <linux/interrupt.h>
@@ -365,10 +379,6 @@ void __exit ecap_capture_exit(void)
 module_init(ecap_capture_init);
 module_exit(ecap_capture_exit);
 
-MODULE_LICENSE("GPL");
-MODULE_AUTHOR("Brandon Matthews");
-MODULE_DESCRIPTION("A basic ecap platform device module.");
-
 static irqreturn_t ecap_interrupt(int irq, void *dev_id)
 {
     printk(KERN_DEBUG "ecap interrupted\n");
@@ -384,3 +394,8 @@ static irqreturn_t ecap_interrupt(int irq, void *dev_id)
 
     return IRQ_HANDLED;
 }
+
+MODULE_LICENSE("GPL");
+MODULE_AUTHOR("Brandon Matthews <bmatt@optimaltour.us>");
+MODULE_DESCRIPTION("A basic ecap platform device module.");
+

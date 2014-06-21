@@ -1,4 +1,16 @@
 
+/*
+ A very simple C node for the Erlang VM. This node poll()s the given file
+ and sends a message to e1@am335x-evm.
+
+ BUGS:
+ - hard-coded destination node for messages. 
+ - no logging level adjustment
+ - when e1@am335x-evm quits, the c node exits in an odd way
+
+ Copyleft Brandon Matthews <thenewwazoo@optimaltour.us> GPLv2
+*/
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h> // for memcpy
